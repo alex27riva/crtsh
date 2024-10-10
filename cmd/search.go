@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"net/url"
 	"os"
-
 	"github.com/alex27riva/crtsh/fetcher"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
@@ -83,7 +82,7 @@ func search() (err error) {
 	// } else
 	
 if domain != "" {
-		certs := fetcher.fetchCertificates(domain)
+		certs := fetcher.FetchCertificates(domain)
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"Name", "Issuer", "Not Before", "Not After"})
 		table.SetColumnColor(tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiRedColor},

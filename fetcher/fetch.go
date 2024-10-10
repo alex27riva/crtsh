@@ -52,7 +52,7 @@ type Certificate struct {
 	ResultCount    int    `json:"result_count"`
 }
 
-func fetchCertificates(domain string) []Certificate {
+func FetchCertificates(domain string) []Certificate {
 	url := fmt.Sprintf("https://crt.sh/?q=%s&output=json", domain)
 
 	// Make the HTTP GET request
