@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"github.com/parnurzeal/gorequest"
 	"github.com/spf13/viper"
-	"io/ioutil"
+	"io"
 	"net/http"
 	"time"
 )
@@ -52,36 +52,34 @@ type Certificate struct {
 	ResultCount    int    `json:"result_count"`
 }
 
-func FetchCertificates(domain string) []Certificate {
+func FetchCertificates(domain string) ([]Certificate, error) {
 	url := fmt.Sprintf("https://crt.sh/?q=%s&output=json", domain)
 
 	// Make the HTTP GET request
 	resp, err := http.Get(url)
 	if err != nil {
-		fmt.Println("Error fetching the URL:", err)
-		return nil
+
+		return nil, fmt.Errorf("error fetching the URL: %w", err)
 	}
 	defer resp.Body.Close()
 
 	// Check if the response status is OK
 	if resp.StatusCode != http.StatusOK {
-		fmt.Println("Error: received non-200 response status:", resp.Status)
-		return nil
+		return nil, fmt.Errorf("received non-200 response status: %s", resp.Status)
 	}
 
 	// Read the response body
-	body, err := ioutil.ReadAll(resp.Body)
+	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		fmt.Println("Error reading response body:", err)
-		return nil
+		return nil, fmt.Errorf("error reading response body: %w", err)
 	}
 
 	// Unmarshal the JSON response
 	var certificates []Certificate
 	err = json.Unmarshal(body, &certificates)
 	if err != nil {
-		fmt.Println("Error unmarshalling JSON:", err)
+		return nil, fmt.Errorf("error unmarshalling JSON: %w", err)
 
 	}
-	return certificates
+	return certificates, nil
 }

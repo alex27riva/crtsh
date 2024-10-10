@@ -2,13 +2,13 @@ package cmd
 
 import (
 	"fmt"
-	"net/url"
-	"os"
 	"github.com/alex27riva/crtsh/fetcher"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"net/url"
+	"os"
 )
 
 // searchCmd represents the search command
@@ -40,7 +40,6 @@ func search() (err error) {
 	if query == "" && domain == "" {
 		return errors.New("--query or --domain must be specified")
 	}
-
 
 	values := url.Values{}
 	values.Add("output", "json")
@@ -80,9 +79,13 @@ func search() (err error) {
 	// 		table.Render()
 	// 	}
 	// } else
-	
-if domain != "" {
-		certs := fetcher.FetchCertificates(domain)
+
+	if domain != "" {
+		certs, err := fetcher.FetchCertificates(domain)
+		if err != nil {
+			fmt.Println("Error fetching certificates")
+			os.Exit(1)
+		}
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"Name", "Issuer", "Not Before", "Not After"})
 		table.SetColumnColor(tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiRedColor},
