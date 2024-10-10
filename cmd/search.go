@@ -1,15 +1,11 @@
 package cmd
 
 import (
-	"encoding/json"
 	"fmt"
-	"io/ioutil"
-	"net/http"
 	"net/url"
 	"os"
-	"time"
 
-	"github.com/knqyf263/crtsh/fetcher"
+	"github.com/alex27riva/crtsh/fetcher"
 	"github.com/olekukonko/tablewriter"
 	"github.com/pkg/errors"
 	"github.com/spf13/cobra"
@@ -39,17 +35,6 @@ func init() {
 	viper.BindPFlag("plain", searchCmd.Flags().Lookup("plain"))
 }
 
-// Result : Result
-type Result struct {
-	IssuerCaID        int    `json:"issuer_ca_id"`
-	IssuerName        string `json:"issuer_name"`
-	NameValue         string `json:"name_value"`
-	MinCertID         int    `json:"min_cert_id"`
-	MinEntryTimestamp string `json:"min_entry_timestamp"`
-	NotBefore         string `json:"not_before"`
-	NotAfter          string `json:"not_after"`
-}
-
 func search() (err error) {
 	query := viper.GetString("query")
 	domain := viper.GetString("domain")
@@ -57,8 +42,6 @@ func search() (err error) {
 		return errors.New("--query or --domain must be specified")
 	}
 
-	crtURL := "https://crt.sh/"
-	client := &http.Client{Timeout: time.Duration(30) * time.Second}
 
 	values := url.Values{}
 	values.Add("output", "json")
@@ -68,59 +51,39 @@ func search() (err error) {
 		values.Add("q", domain)
 	}
 
-	req, err := http.NewRequest("GET", crtURL, nil)
-	if err != nil {
-		return errors.Wrap(err, "Failed to NewRequest")
-	}
-	req.URL.RawQuery = values.Encode()
-	resp, err := client.Do(req)
-	if err != nil {
-		return errors.Wrap(err, "Failed to send HTTP request")
-	}
+	// if query != "" {
+	// 	for _, result := range cer {
+	// 		url := fmt.Sprintf("%s?output=json&id=%d", crtURL, result.MinCertID)
+	// 		urls = append(urls, url)
+	// 	}
+	// 	certs := fetcher.FetchConcurrently(urls, 5, 0)
+	// 	if err != nil {
+	// 		return errors.Wrap(err, "Failed to fetch concurrently")
+	// 	}
 
-	b, err := ioutil.ReadAll(resp.Body)
-	if err != nil {
-		return errors.Wrap(err, "Failed to ReadAll")
-	}
+	// 	table := tablewriter.NewWriter(os.Stdout)
+	// 	table.SetHeader([]string{"Common Name", "Organization", "Locality", "Country", "Not After"})
+	// 	table.SetColumnColor(tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiRedColor},
+	// 		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
+	// 		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
+	// 		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
+	// 		tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
+	// 	)
 
-	var urls []string
-	var results []Result
-
-	err = json.Unmarshal(b, &results)
-	if err != nil {
-		return errors.Wrap(err, "Failed to unmarshal json")
-	}
-
-	if query != "" {
-		for _, result := range results {
-			url := fmt.Sprintf("%s?output=json&id=%d", crtURL, result.MinCertID)
-			urls = append(urls, url)
-		}
-		certs, err := fetcher.FetchConcurrently(urls, 5, 0)
-		if err != nil {
-			return errors.Wrap(err, "Failed to fetch concurrently")
-		}
-
-		table := tablewriter.NewWriter(os.Stdout)
-		table.SetHeader([]string{"Common Name", "Organization", "Locality", "Country", "Not After"})
-		table.SetColumnColor(tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiRedColor},
-			tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
-			tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
-			tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
-			tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
-		)
-
-		for _, cert := range certs {
-			if !viper.GetBool("plain") {
-				table.Append([]string{cert.CommonName, cert.OrganizationName, cert.LocalityName, cert.CountryName, cert.NotAfter})
-			} else {
-				fmt.Println(cert.CommonName)
-			}
-		}
-		if !viper.GetBool("plain") {
-			table.Render()
-		}
-	} else if domain != "" {
+	// 	for _, cert := range certs {
+	// 		if !viper.GetBool("plain") {
+	// 			table.Append([]string{cert.CommonName, cert.OrganizationName, cert.LocalityName, cert.CountryName, cert.NotAfter})
+	// 		} else {
+	// 			fmt.Println(cert.CommonName)
+	// 		}
+	// 	}
+	// 	if !viper.GetBool("plain") {
+	// 		table.Render()
+	// 	}
+	// } else
+	
+if domain != "" {
+		certs := fetcher.fetchCertificates(domain)
 		table := tablewriter.NewWriter(os.Stdout)
 		table.SetHeader([]string{"Name", "Issuer", "Not Before", "Not After"})
 		table.SetColumnColor(tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiRedColor},
@@ -128,7 +91,7 @@ func search() (err error) {
 			tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
 			tablewriter.Colors{tablewriter.Bold, tablewriter.FgHiBlackColor},
 		)
-		for _, result := range results {
+		for _, result := range certs {
 			if !viper.GetBool("plain") {
 				table.Append([]string{result.NameValue, result.IssuerName, result.NotBefore, result.NotAfter})
 			} else {
@@ -140,6 +103,5 @@ func search() (err error) {
 		}
 	}
 
-	defer resp.Body.Close()
 	return nil
 }
